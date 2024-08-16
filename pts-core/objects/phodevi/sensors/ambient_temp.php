@@ -39,7 +39,7 @@ class ambient_temp extends phodevi_sensor
 		}
 		if(pts_client::executable_in_path('ipmitool'))
 		{
-			$ipmi = phodevi_linux_parser::read_ipmitool_sensor(array('SYS_Air_Inlet', 'MB_Air_Inlet'));
+			$ipmi = phodevi_linux_parser::read_ipmitool_sensor('sys_air_.*let|mb_air_.*let|temp_air_.*let');
 
 			if($ipmi > 0 && is_numeric($ipmi))
 			{

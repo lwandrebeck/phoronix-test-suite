@@ -33,7 +33,7 @@ class memory_temp extends phodevi_sensor
 
 		if(pts_client::executable_in_path('ipmitool'))
 		{
-			$ipmi = phodevi_linux_parser::read_ipmitool_sensor(array('DIMM_MOSFET_1', 'DIMM_MOSFET_2', 'DDR4_A1_Temp'));
+			$ipmi = phodevi_linux_parser::read_ipmitool_sensor('dimm.*temp|dimm.*mosfet|ddr.*temp|ddr.*mosfet|p._umc._ch_.*');
 
 			if($ipmi > 0 && is_numeric($ipmi))
 			{

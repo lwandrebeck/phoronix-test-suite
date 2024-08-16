@@ -120,7 +120,7 @@ class sys_power extends phodevi_sensor
 		}
 		if(pts_client::executable_in_path('ipmitool'))
 		{
-			$ipmi_read = phodevi_linux_parser::read_ipmitool_sensor('Node Power');
+			$ipmi_read = phodevi_linux_parser::read_ipmitool_sensor('total.*power|pmbpower');
 
 			if($ipmi_read > 0 && is_numeric($ipmi_read))
 			{
@@ -136,7 +136,7 @@ class sys_power extends phodevi_sensor
 				return true;
 			}
 
-			$ipmi_ps1 = phodevi_linux_parser::read_ipmitool_sensor('PS1_Input_Power');
+			$ipmi_ps1 = phodevi_linux_parser::read_ipmitool_sensor('psu1_power_in|psu0_pin|psu0_pout');
 			//$ipmi_ps2 = phodevi_linux_parser::read_ipmitool_sensor('PS2_Input_Power');
 			if(is_numeric($ipmi_ps1) && $ipmi_ps1 > 1)
 			{
@@ -172,11 +172,11 @@ class sys_power extends phodevi_sensor
 		}
 		else if(self::$ipmitool)
 		{
-			return phodevi_linux_parser::read_ipmitool_sensor('Node Power');
+			return phodevi_linux_parser::read_ipmitool_sensor('total.*power|pmbpower');
 		}
 		else if(self::$ipmitool_ps)
 		{
-			return phodevi_linux_parser::read_ipmitool_sensor('PS1_Input_Power', 0) + phodevi_linux_parser::read_ipmitool_sensor('PS2_Input_Power', 0);
+			return phodevi_linux_parser::read_ipmitool_sensor('psu1_power_in|psu0_pin|psu0_pout', 0) + phodevi_linux_parser::read_ipmitool_sensor('psu2_power_in|psu1_pin|psu1_pout', 0);
 		}
 		else if(self::$ipmitool_dcmi)
 		{

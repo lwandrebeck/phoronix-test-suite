@@ -26,27 +26,20 @@ class phodevi_linux_parser
 	public static function read_ipmitool_sensor($sensors, $default_value = false)
 	{
 		$value = $default_value;
-		$ipmitool = shell_exec('ipmitool sdr list 2>&1');
-
-		foreach(pts_arrays::to_array($sensors) as $sensor)
-		{
-			$hit = stripos($ipmitool, $sensor);
-
-			if($hit !== false)
-			{
-				$trimmed = substr($ipmitool, ($hit + strlen($sensor)));
-				$trimmed = substr($trimmed, 0, strpos($trimmed, PHP_EOL));
-				$trimmed = explode('|', $trimmed);
-
-				if(count($trimmed) == 3)
-				{
-					$value = explode(' ', trim($trimmed[1]));
-					$value = $value[0];
-					break;
-				}
-			}
+		// Create sdr cache to speed up ipmitool execution
+		static $pts_sdr_cache_file = false;
+		if (!$pts_sdr_cache_file) {
+			$sdr_cache_file = shell_exec("ipmitool sdr dump /tmp/.pts_sdr_cache_file 2>&1");
+			$pts_sdr_cache_file = true;
 		}
-
+		// grep -vi to take out useless lines. grep -Ei to get only what we search for.
+		// cut to get value only. sort -n | tail to keep the highest value only.
+		// For example, some BMCs do give mem temp for every slot.
+		$ipmicmd = shell_exec("ipmitool -S /tmp/.pts_sdr_cache_file sdr list -c 2>&1 | grep -vi 'no reading\|not readable\|disabled\|,,,' | grep -Ei '$sensors' | cut -f2 -d, | sort -n | tail -n1");
+		if($ipmicmd !== null)
+		{
+			return rtrim($ipmicmd);
+		}
 		return $value;
 	}
 	public static function read_ipmitool_dcmi_power()
