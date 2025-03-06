@@ -413,6 +413,7 @@ class pts_result_viewer_embed
 									$run_counts_for_identifier[$bi->get_result_identifier()] = $bi->get_sample_count();
 								}
 							}
+							/*
 							foreach($c_ro->test_result_buffer->buffer_items as $bi)
 							{
 								$res_tally = $bi->get_result_value();
@@ -425,7 +426,7 @@ class pts_result_viewer_embed
 									$res_tally = array_sum($res_tally);
 									$graph->addTestNote($bi->get_result_identifier() . ': Approximate power consumption of ' . round($res_tally / $run_counts_for_identifier[$bi->get_result_identifier()]) . ' Joules per run.');
 								}
-							}
+							}*/
 						}
 						$tabs[$dindex] = pts_render::render_graph_inline_embed($graph, $result_file, $extra_attributes);
 						$show_on_print[] = $dindex;
@@ -801,7 +802,7 @@ class pts_result_viewer_embed
 				break;
 			}
 		}
-		$suites_in_result_file = $system_count > 1 ? pts_test_suites::suites_in_result_file($result_file, true, 0) : array();
+		$suites_in_result_file = $system_count > 1 && self::check_request_for_var($request, 'lcs') ? pts_test_suites::suites_in_result_file($result_file, true, 0) : array();
 		// END OF CHECKS
 
 		$analyze_options .= '<form action="' . $_SERVER['REQUEST_URI'] . '" method="post">';
@@ -831,6 +832,7 @@ class pts_result_viewer_embed
 			$analyze_checkboxes['View'][] = array('hlc', 'Do Not Show Results With Little Change/Spread');
 			$analyze_checkboxes['View'][] = array('spr', 'List Notable Results');
 			$analyze_checkboxes['View'][] = array('src', 'Show Result Confidence Charts');
+			$analyze_checkboxes['View'][] = array('lcs', 'Allow Limiting Results To Certain Suite(s)');
 
 			if($has_identifier_with_color_brand)
 			{
@@ -935,6 +937,18 @@ class pts_result_viewer_embed
 
 		$analyze_checkboxes['Table'][] = array('sdt', 'Show Detailed System Result Table');
 
+		$result_file_env_vars = pts_strings::parse_value_string_vars($result_file->get_preset_environment_variables());
+		if(isset($result_file_env_vars['MONITOR']))
+		{
+			$analyze_checkboxes['Sensor Monitoring'] = array(
+				array('asm', 'Show Accumulated Sensor Monitoring Data For Displayed Results')
+				);
+			if(stripos($result_file_env_vars['MONITOR'], '.power') !== false)
+			{
+				$analyze_checkboxes['Sensor Monitoring'][] = array('ppw', 'Generate Power Efficiency / Performance Per Watt Results');
+			}
+		}
+
 		$t = null;
 		foreach($analyze_checkboxes as $title => $group)
 		{
@@ -969,7 +983,7 @@ class pts_result_viewer_embed
 			if($system_count > 1)
 			{
 				$t .= '<div class="div_table_cell">Highlight<br />Result</div>
-			<div class="div_table_cell">Hide<br />Result</div>';
+			<div class="div_table_cell">Toggle/Hide<br />Result</div>';
 			}
 
 			$t .= '<div class="div_table_cell">Result<br />Identifier</div>';
@@ -991,9 +1005,10 @@ class pts_result_viewer_embed
 				$hgv = explode(',', $hgv);
 			}
 			$rmm = self::check_request_for_var($request, 'rmm');
-			if(!is_array($rmm))
+			$rmm_is_array = is_array($rmm);
+			if(!$rmm_is_array)
 			{
-				$rmm = explode(',', $rmm);
+				$rmm .= ',';
 			}
 			$start_of_year = strtotime(date('Y-01-01'));
 			$test_run_times = $result_file->get_test_run_times();
@@ -1009,7 +1024,7 @@ class pts_result_viewer_embed
 				if($system_count > 1)
 				{
 					$t .= '<div class="div_table_cell"><input type="checkbox" name="hgv[]" value="' . $si . '"' . (is_array($hgv) && in_array($si, $hgv) ? ' checked="checked"' : null) . ' /></div>
-				<div class="div_table_cell"><input type="checkbox" name="rmm[]" value="' . $si . '"' . (is_array($rmm) && in_array($si, $rmm) ? ' checked="checked"' : null) . ' /></div>';
+				<div class="div_table_cell"><input type="checkbox" name="rmm[]" value="' . $si . '"' . (($rmm_is_array && in_array($si, $rmm)) || (!$rmm_is_array && strpos($rmm, $si . ',') !== false) ? ' checked="checked"' : null) . ' /></div>';
 				}
 
 				$t .= '<div class="div_table_cell"><strong>' . $si . '</strong></div>';
@@ -1041,8 +1056,8 @@ class pts_result_viewer_embed
 				$t .= '
 				<div class="div_table_row">
 				<div class="div_table_cell"> </div>
-				<div class="div_table_cell"><input type="checkbox" onclick="javascript:invert_hide_all_results_checkboxes();" /></div>
-				<div class="div_table_cell"><em>Invert Hiding All Results Option</em></div>';
+				<div class="div_table_cell"><input type="checkbox" name="rmmi" value="1"' . (self::check_request_for_var($request, 'rmmi') ? ' checked="checked"' : null) . ' /></div>
+				<div class="div_table_cell"><em>Invert Behavior (Only Show Selected Data)</em></div>';
 
 				if($has_system_logs)
 				{
@@ -1092,7 +1107,7 @@ class pts_result_viewer_embed
 		}
 
 		// Result export?
-		$result_title = (isset($_GET['result']) ? $_GET['result'] : 'result');
+		$result_title = (isset($_GET['result']) ? str_replace(',', '_', $_GET['result']) : 'result');
 		switch(isset($_REQUEST['export']) ? $_REQUEST['export'] : '')
 		{
 			case '':
@@ -1574,14 +1589,45 @@ class pts_result_viewer_embed
 		}
 		if(($rmm = self::check_request_for_var($request, 'rmm')))
 		{
-			if(!is_array($rmm))
+			if(self::check_request_for_var($request, 'rmmi'))
 			{
-				$rmm = explode(',', $rmm);
-			}
+				// Invert behavior
+				$rmm_is_array = is_array($rmm);
+				if(!$rmm_is_array)
+				{
+					$rmm .= ',';
+				}
 
-			foreach($rmm as $rm)
+				foreach($result_file->get_system_identifiers() as $si)
+				{
+					if(($rmm_is_array && !in_array($si, $rmm)) || (!$rmm_is_array && strpos($rmm, $si . ',') === false))
+					{
+						$result_file->remove_run($si);
+					}
+				}
+			}
+			else
 			{
-				$result_file->remove_run($rm);
+				if(!is_array($rmm))
+				{
+					$rmm = explode(',', $rmm);
+				}
+				foreach($rmm as $rm)
+				{
+					$result_file->remove_run($rm);
+				}
+			}
+		}
+
+		if(self::check_request_for_var($request, 'asm') || self::check_request_for_var($request, 'ppw'))
+		{
+			$results = pts_result_file_analyzer::generate_composite_for_sensors($result_file, false, (self::check_request_for_var($request, 'ppw') ? 'Power' : false), (self::check_request_for_var($request, 'asm') ? true : false));
+			if($results)
+			{
+				foreach($results as $result)
+				{
+					$result_file->add_result($result);
+				}
 			}
 		}
 		if(self::check_request_for_var($request, 'grs'))

@@ -532,7 +532,7 @@ class phodevi_cpu extends phodevi_device_interface
 			$physical_cpu_ids = phodevi_linux_parser::read_cpuinfo('physical id');
 			$physical_cpu_count = count(array_unique($physical_cpu_ids));
 
-			$cpu_strings = phodevi_linux_parser::read_cpuinfo(array('model name', 'Processor', 'cpu', 'cpu model'));
+			$cpu_strings = phodevi_linux_parser::read_cpuinfo(array('model name', 'Processor', 'cpu', 'cpu model', 'Model Name'));
 
 			$cpu_strings_unique = array_unique($cpu_strings);
 
@@ -796,6 +796,12 @@ class phodevi_cpu extends phodevi_device_interface
 						case '0xd13':
 							$new_info .= ' Cortex-R52';
 							break;
+						case '0xd14':
+							$new_info .= ' Cortex-R82AE';
+							break;
+						case '0xd15':
+							$new_info .= ' Cortex-R82';
+							break;
 						case '0xd20':
 							$new_info .= ' Cortex-M23';
 							break;
@@ -870,6 +876,9 @@ class phodevi_cpu extends phodevi_device_interface
 					{
 						case '0x001':
 							$new_info .= ' A64FX';
+							break;
+						case '0x003':
+							$new_info .= ' MONAKA';
 							break;
 					}
 				}
@@ -1452,6 +1461,7 @@ class phodevi_cpu extends phodevi_device_interface
 				191 => 'Raptor Lake',
 				197 => 'Arrow Lake',
 				198 => 'Arrow Lake',
+				204 => 'Panther Lake',
 				207 => 'Emerald Rapids',
 				221 => 'Clearwater Forest',
 				),
@@ -1461,6 +1471,9 @@ class phodevi_cpu extends phodevi_device_interface
 				3 => 'Prescott',
 				4 => 'Prescott',
 				6 => 'Cedar Mill',
+				),
+			19 => array(
+				1 => 'Diamond Rapids',
 				),
 			);
 

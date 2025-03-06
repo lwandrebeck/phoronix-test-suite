@@ -134,7 +134,10 @@ class pts_module_manager
 				{
 					list($var, $value) = pts_strings::trim_explode('=', $ev);
 					putenv($var . '=' . $value);
-					pts_env::set($var, $value);
+					if(pts_env::read($var) == false)
+					{
+						pts_env::set($var, $value);
+					}
 					pts_module_manager::var_store_add($var, $value);
 				}
 			}
@@ -293,7 +296,7 @@ class pts_module_manager
 	}
 	public static function clean_module_list()
 	{
-		array_unique(self::$modules);
+		self::$modules = array_unique(self::$modules);
 
 		foreach(self::$modules as $i => $module)
 		{

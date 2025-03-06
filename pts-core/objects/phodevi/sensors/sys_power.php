@@ -32,6 +32,7 @@ class sys_power extends phodevi_sensor
 	private static $wattsup_meter_raw = false;
 	private static $ipmitool = false;
 	private static $ipmitool_ps = false;
+	private static $ipmitool_platform = false;
 	private static $ipmitool_dcmi = false;
 	private static $windows_battery = false;
 	private static $hwmon_power_meter = false;
@@ -144,6 +145,14 @@ class sys_power extends phodevi_sensor
 				self::$ipmitool_ps = true;
 				return true;
 			}
+			
+			$ipmi_ps1 = phodevi_linux_parser::read_ipmitool_sensor('PSU1 Input Power');
+			//$ipmi_ps2 = phodevi_linux_parser::read_ipmitool_sensor('PS2_Input_Power');
+			if(is_numeric($ipmi_ps1) && $ipmi_ps1 > 1)
+			{
+				self::$ipmitool_platform = true;
+				return true;
+			}
 		}
 	}
 	public function read_sensor()
@@ -178,6 +187,10 @@ class sys_power extends phodevi_sensor
 		else if(self::$ipmitool_ps)
 		{
 			return phodevi_linux_parser::read_ipmitool_sensor('psu1_power_in|psu0_pin|psu0_pout', 0) + phodevi_linux_parser::read_ipmitool_sensor('psu2_power_in|psu1_pin|psu1_pout', 0);
+		}
+		else if(self::$ipmitool_platform)
+		{
+			return phodevi_linux_parser::read_ipmitool_sensor('PSU1 Input Power', 0) + phodevi_linux_parser::read_ipmitool_sensor('PSU2 Input Power', 0);
 		}
 		else if(self::$ipmitool_dcmi)
 		{
